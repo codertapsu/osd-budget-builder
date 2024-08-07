@@ -1,3 +1,575 @@
-<h1 class="text-3xl font-bold underline">
-  Hello world!
-</h1>
+<header class="sticky-header shadow p-4 bg-blue-500 text-white">
+  <h1 class="text-2xl font-bold">Budget Builder</h1>
+</header>
+<main
+  *ngIf="budgetForm"
+  class="container mx-auto p-4"
+>
+  <div>
+    <osd-ui-period-picker
+      [ngModel]="periodFC.value"
+      (ngModelChange)="onPeriodChange($event)"
+    />
+  </div>
+  <form [formGroup]="budgetForm">
+    <div class="overflow-x-auto table-container">
+      <table class="min-w-full border-collapse border border-gray-300">
+        <thead>
+          <tr>
+            <th class="border border-gray-300 p-2 bg-gray-100">
+              <div>
+                <osd-ui-input-text-field
+                  autofocus
+                  placeholder="Enter the budget intent label"
+                  formControlName="label"
+                />
+              </div>
+            </th>
+            @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+              @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                <th class="border border-gray-300 p-2 bg-gray-100">{{ month }} {{ periodFC.value.year }}</th>
+              }
+            }
+            <th class="border border-gray-300 p-2 bg-gray-100 sticky-col"></th>
+          </tr>
+        </thead>
+        <ng-container formArrayName="incomes">
+          <tbody>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div>
+                  <strong>Income</strong>
+                </div>
+              </td>
+            </tr>
+            @for (incomeGroup of incomesFA.controls; let groupIndex = $index, isFirstGroup = $first; track groupIndex) {
+              <ng-container [formGroupName]="groupIndex">
+                @if (!isFirstGroup) {
+                  <tr>
+                    <td
+                      class="border border-gray-300 p-2"
+                      [attr.colspan]="columnsSpan"
+                    >
+                      <div class="invisible">Empty row</div>
+                    </td>
+                  </tr>
+                }
+                <tr>
+                  <td
+                    class="border border-gray-300 p-2"
+                    [attr.colspan]="columnsSpan"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span>Category</span>
+                      <span
+                        class="easy-view"
+                        [attr.data-coordinates]="'0+' + groupIndex"
+                      >
+                        <osd-ui-input-text-field
+                          [formControl]="$any(incomeGroup.get('label'))"
+                          placeholder="Enter the category label"
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        class="p-2 text-red-100 transition-colors duration-300 bg-red-500 rounded-full shadow-xl hover:bg-red-600 shadow-red-400/30"
+                        (click)="removeIncomeGroup(groupIndex)"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          xmlns:xlink="http://www.w3.org/1999/xlink"
+                          fill="currentColor"
+                          height="12px"
+                          width="12px"
+                          version="1.1"
+                          id="Capa_1"
+                          viewBox="0 0 490 490"
+                          xml:space="preserve"
+                        >
+                          <polygon
+                            points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490   489.292,457.678 277.331,245.004 489.292,32.337 "
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <ng-container formArrayName="items">
+                  @for (incomeItem of $any(incomeGroup.get('items')).controls; let rowIndex = $index; track rowIndex) {
+                    <ng-container [formGroupName]="rowIndex">
+                      <tr>
+                        <td class="border border-gray-300 p-2">
+                          <div
+                            class="easy-view"
+                            [attr.data-coordinates]="'0+' + groupIndex + '+' + rowIndex"
+                          >
+                            <osd-ui-input-text-field
+                              placeholder="Enter the label"
+                              [formControl]="$any(incomeItem.get('label'))"
+                            />
+                          </div>
+                        </td>
+                        <ng-container formArrayName="valuesByMonth">
+                          @for (valueItem of incomeItem.get('valuesByMonth').controls; let columnIndex = $index; track columnIndex) {
+                            @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                              <td class="border border-gray-300 p-2">
+                                <div
+                                  #contextPopover
+                                  class="max-w-sm mx-auto bg-white rounded-lg shadow-lg overflow-hidden hidden"
+                                >
+                                  <ul>
+                                    <li>
+                                      <button
+                                        type="button"
+                                        class="block px-4 py-2 text-gray-600 hover:bg-gray-100"
+                                        (click)="applyToAll(groupIndex, rowIndex, columnIndex, 'income')"
+                                      >
+                                        Apply to all
+                                      </button>
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div
+                                  class="easy-view"
+                                  [attr.data-coordinates]="'0+' + groupIndex + '+' + rowIndex + '+' + columnIndex"
+                                  [osdContextMenu]="contextPopover"
+                                >
+                                  <osd-ui-input-number-field
+                                    placeholder="Input value"
+                                    [min]="0"
+                                    [formControl]="valueItem"
+                                    (valueChange)="calculateSubTotalsIncomes(groupIndex, columnIndex)"
+                                  />
+                                </div>
+                              </td>
+                            }
+                          }
+                        </ng-container>
+                        <td class="border border-gray-300 p-2 sticky-col">
+                          <div>
+                            <button
+                              type="button"
+                              class="p-2 text-red-100 transition-colors duration-300 bg-red-500 rounded-full shadow-xl hover:bg-red-600 shadow-red-400/30"
+                              (click)="removeIncomeItem(groupIndex, rowIndex)"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                fill="currentColor"
+                                height="12px"
+                                width="12px"
+                                version="1.1"
+                                id="Capa_1"
+                                viewBox="0 0 490 490"
+                                xml:space="preserve"
+                              >
+                                <polygon
+                                  points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490   489.292,457.678 277.331,245.004 489.292,32.337 "
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-container>
+                  }
+                  @if (incomeGroup.get('label').value) {
+                    <tr>
+                      <td
+                        class="border border-gray-300 p-2"
+                        [attr.colspan]="columnsSpan"
+                      >
+                        <button
+                          type="button"
+                          class="px-6 py-2 text-sm text-blue-100 transition-colors duration-300 bg-blue-500 rounded-full shadow-xl hover:bg-blue-600 shadow-blue-400/30"
+                          (click)="addIncomeItem(groupIndex)"
+                        >
+                          Add new <strong>{{ incomeGroup.get('label').value }}</strong> category
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  <tr>
+                    <td class="border border-gray-300 p-2">
+                      <div class="easy-view">
+                        <strong>Sub totals</strong>
+                      </div>
+                    </td>
+                    @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+                      @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                        <td class="border border-gray-300 p-2">
+                          <div class="easy-view">
+                            {{ $subTotalsIncomes()[groupIndex][columnIndex] }}
+                          </div>
+                        </td>
+                      }
+                    }
+                    <td class="border border-gray-300 p-2 sticky-col"></td>
+                  </tr>
+                </ng-container>
+              </ng-container>
+            }
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div class="invisible">Empty row</div>
+              </td>
+            </tr>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div>
+                  <button
+                    type="button"
+                    class="px-6 py-2 text-sm text-blue-100 transition-colors duration-300 bg-blue-500 rounded-full shadow-xl hover:bg-blue-600 shadow-blue-400/30"
+                    (click)="addIncomeGroup()"
+                  >
+                    Add new parent category
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div class="invisible">Empty row</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-gray-300 p-2">
+                <div class="easy-view">
+                  <strong>Income Total</strong>
+                </div>
+              </td>
+              @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+                @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                  <td class="border border-gray-300 p-2">
+                    <div class="easy-view">
+                      {{ $totalsIncomes()[columnIndex] }}
+                    </div>
+                  </td>
+                }
+              }
+              <td class="border border-gray-300 p-2 sticky-col"></td>
+            </tr>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div class="invisible">Empty row</div>
+              </td>
+            </tr>
+          </tbody>
+        </ng-container>
+        <ng-container formArrayName="expenses">
+          <tbody>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div>
+                  <strong>Expenses</strong>
+                </div>
+              </td>
+            </tr>
+            @for (expenseGroup of expensesFA.controls; let groupIndex = $index, isFirstGroup = $first; track groupIndex) {
+              <ng-container [formGroupName]="groupIndex">
+                @if (!isFirstGroup) {
+                  <tr>
+                    <td
+                      class="border border-gray-300 p-2"
+                      [attr.colspan]="columnsSpan"
+                    >
+                      <div class="invisible">Empty row</div>
+                    </td>
+                  </tr>
+                }
+                <tr>
+                  <td
+                    class="border border-gray-300 p-2"
+                    [attr.colspan]="columnsSpan"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span>Category</span>
+                      <span
+                        class="easy-view"
+                        [attr.data-coordinates]="'1+' + groupIndex"
+                      >
+                        <osd-ui-input-text-field
+                          placeholder="Enter the category label"
+                          [formControl]="$any(expenseGroup.get('label'))"
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        class="p-2 text-red-100 transition-colors duration-300 bg-red-500 rounded-full shadow-xl hover:bg-red-600 shadow-red-400/30"
+                        (click)="removeExpenseGroup(groupIndex)"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          xmlns:xlink="http://www.w3.org/1999/xlink"
+                          fill="currentColor"
+                          height="12px"
+                          width="12px"
+                          version="1.1"
+                          id="Capa_1"
+                          viewBox="0 0 490 490"
+                          xml:space="preserve"
+                        >
+                          <polygon
+                            points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490   489.292,457.678 277.331,245.004 489.292,32.337 "
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <ng-container formArrayName="items">
+                  @for (expenseItem of $any(expenseGroup.get('items')).controls; let rowIndex = $index; track rowIndex) {
+                    <ng-container [formGroupName]="rowIndex">
+                      <tr>
+                        <td class="border border-gray-300 p-2">
+                          <div
+                            class="easy-view"
+                            [attr.data-coordinates]="'1+' + groupIndex + '+' + rowIndex"
+                          >
+                            <osd-ui-input-text-field
+                              placeholder="Enter the label"
+                              [formControl]="$any(expenseItem.get('label'))"
+                            />
+                          </div>
+                        </td>
+                        <ng-container formArrayName="valuesByMonth">
+                          @for (valueItem of expenseItem.get('valuesByMonth').controls; let columnIndex = $index; track columnIndex) {
+                            @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                              <td class="border border-gray-300 p-2">
+                                <div
+                                  #contextPopover
+                                  class="max-w-sm mx-auto bg-white rounded-lg shadow-lg overflow-hidden hidden"
+                                >
+                                  <ul>
+                                    <li>
+                                      <button
+                                        type="button"
+                                        class="block px-4 py-2 text-gray-600 hover:bg-gray-100"
+                                        (click)="applyToAll(groupIndex, rowIndex, columnIndex, 'expense')"
+                                      >
+                                        Apply to all
+                                      </button>
+                                    </li>
+                                  </ul>
+                                </div>
+                                <div
+                                  class="easy-view"
+                                  [attr.data-coordinates]="'1+' + groupIndex + '+' + rowIndex + '+' + columnIndex"
+                                  [osdContextMenu]="contextPopover"
+                                >
+                                  <osd-ui-input-number-field
+                                    placeholder="Input value"
+                                    [min]="0"
+                                    [formControl]="valueItem"
+                                    (valueChange)="calculateSubTotalsExpenses(groupIndex, columnIndex)"
+                                  />
+                                </div>
+                              </td>
+                            }
+                          }
+                        </ng-container>
+                        <td class="border border-gray-300 p-2 sticky-col">
+                          <div>
+                            <button
+                              type="button"
+                              class="p-2 text-red-100 transition-colors duration-300 bg-red-500 rounded-full shadow-xl hover:bg-red-600 shadow-red-400/30"
+                              (click)="removeExpenseItem(groupIndex, rowIndex)"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                fill="currentColor"
+                                height="12px"
+                                width="12px"
+                                version="1.1"
+                                id="Capa_1"
+                                viewBox="0 0 490 490"
+                                xml:space="preserve"
+                              >
+                                <polygon
+                                  points="456.851,0 245,212.564 33.149,0 0.708,32.337 212.669,245.004 0.708,457.678 33.149,490 245,277.443 456.851,490   489.292,457.678 277.331,245.004 489.292,32.337 "
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-container>
+                  }
+                  @if (expenseGroup.get('label').value) {
+                    <tr>
+                      <td
+                        class="border border-gray-300 p-2"
+                        [attr.colspan]="columnsSpan"
+                      >
+                        <button
+                          type="button"
+                          class="px-6 py-2 text-sm text-blue-100 transition-colors duration-300 bg-blue-500 rounded-full shadow-xl hover:bg-blue-600 shadow-blue-400/30"
+                          (click)="addExpenseItem(groupIndex)"
+                        >
+                          Add new <strong>{{ expenseGroup.get('label').value }}</strong> category
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                  <tr>
+                    <td class="border border-gray-300 p-2">
+                      <div class="easy-view">
+                        <strong>Sub totals</strong>
+                      </div>
+                    </td>
+                    @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+                      @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                        <td class="border border-gray-300 p-2">
+                          <div class="easy-view">
+                            {{ $subTotalsExpenses()[groupIndex][columnIndex] }}
+                          </div>
+                        </td>
+                      }
+                    }
+                    <td class="border border-gray-300 p-2 sticky-col"></td>
+                  </tr>
+                </ng-container>
+              </ng-container>
+            }
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div class="invisible">Empty row</div>
+              </td>
+            </tr>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div>
+                  <button
+                    type="button"
+                    class="px-6 py-2 text-sm text-blue-100 transition-colors duration-300 bg-blue-500 rounded-full shadow-xl hover:bg-blue-600 shadow-blue-400/30"
+                    (click)="addExpenseGroup()"
+                  >
+                    Add new parent category
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td
+                class="border border-gray-300 p-2"
+                [attr.colspan]="columnsSpan"
+              >
+                <div class="invisible">Empty row</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="border border-gray-300 p-2">
+                <div class="easy-view">
+                  <strong>Total Expenses</strong>
+                </div>
+              </td>
+              @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+                @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                  <td class="border border-gray-300 p-2">
+                    <div class="easy-view">
+                      {{ $totalsExpenses()[columnIndex] }}
+                    </div>
+                  </td>
+                }
+              }
+              <td class="border border-gray-300 p-2 sticky-col"></td>
+            </tr>
+            <td
+              class="border border-gray-300 p-2"
+              [attr.colspan]="columnsSpan"
+            >
+              <div class="invisible">Empty row</div>
+            </td>
+          </tbody>
+        </ng-container>
+        <tbody>
+          <tr>
+            <td class="border border-gray-300 p-2">
+              <div class="easy-view">
+                <strong>Profit / Loss</strong>
+              </div>
+            </td>
+            @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+              @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                <td class="border border-gray-300 p-2">
+                  <div class="easy-view">
+                    {{ $profitLoss()[columnIndex] }}
+                  </div>
+                </td>
+              }
+            }
+            <td class="border border-gray-300 p-2 sticky-col"></td>
+          </tr>
+          <tr>
+            <td class="border border-gray-300 p-2">
+              <div class="easy-view">
+                <strong>Opening Balance</strong>
+              </div>
+            </td>
+            @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+              @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                <td class="border border-gray-300 p-2">
+                  <div class="easy-view">
+                    {{ $openingBalances()[columnIndex] }}
+                  </div>
+                </td>
+              }
+            }
+            <td class="border border-gray-300 p-2 sticky-col"></td>
+          </tr>
+          <tr>
+            <td class="border border-gray-300 p-2">
+              <div class="easy-view">
+                <strong>Closing Balance</strong>
+              </div>
+            </td>
+            @for (month of monthNames; let columnIndex = $index; track columnIndex) {
+              @if (columnIndex >= periodFC.value.fromMonth && columnIndex <= periodFC.value.toMonth) {
+                <td class="border border-gray-300 p-2">
+                  <div class="easy-view">
+                    {{ $closingBalances()[columnIndex] }}
+                  </div>
+                </td>
+              }
+            }
+            <td class="border border-gray-300 p-2 sticky-col"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </form>
+  <div class="py-4 flex flex-row-reverse items-center gap-2">
+    <button
+      type="button"
+      class="px-6 py-2 text-sm text-blue-100 transition-colors duration-300 bg-blue-500 rounded-full shadow-xl hover:bg-blue-600 shadow-blue-400/30"
+      (click)="resetForm()"
+    >
+      Reset to default
+    </button>
+  </div>
+</main>

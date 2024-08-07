@@ -25,6 +25,12 @@
       "dom"
     ],
     "paths": {
+     "@shared/*": [
+        "./projects/portal/src/shared/*"
+      ],
+     "@constants": [
+        "./projects/portal/src/constants"
+      ],
       "osd-ui": [
         "./projects/ui/src/public-api.ts"
       ]

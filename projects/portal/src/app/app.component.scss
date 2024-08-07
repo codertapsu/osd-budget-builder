@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sticky-header {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+th,
+td {
+  white-space: nowrap;
+  width: auto;
+}
+
+.easy-view {
+  display: block;
+  width: 250px;
+}
+
+.table-container {
+  padding-bottom: 16px;
+}
+
+.sticky-col {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+}
