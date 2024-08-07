@@ -1,0 +1,13 @@
+<span [ngClass]="{ disabled: disabled, readonly: readonly }">
+  <input
+    type="text"
+    class="w-full border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    [osdUiAutoFocus]="autofocus"
+    [placeholder]="placeholder"
+    [readOnly]="readonly"
+    [disabled]="disabled"
+    [value]="parsedValue"
+    (input)="changeValue($event)"
+    (blur)="markAsTouched()"
+  />
+</span>

@@ -1,0 +1,56 @@
+<div class="grid grid-cols-3 gap-4">
+  <div class="col-span-1">
+    <label class="block text-gray-700 font-bold mb-2">
+      <span> Select Year: </span>
+      <select
+        [ngModel]="$selectedYear()"
+        (ngModelChange)="onYearChange($event)"
+        class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+      >
+        @for (year of years; track $index) {
+          <option [value]="year">
+            {{ year }}
+          </option>
+        }
+      </select>
+    </label>
+  </div>
+  <div class="col-span-1">
+    <label class="block text-gray-700 font-bold mb-2">
+      <span> From Month: </span>
+      <select
+        [ngModel]="$fromMonth()"
+        (ngModelChange)="onFromMonthChange($event)"
+        class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+      >
+        @for (month of months; track $index) {
+          <option
+            [value]="month.value"
+            [disabled]="month.value > $toMonth()"
+          >
+            {{ month.name }}
+          </option>
+        }
+      </select>
+    </label>
+  </div>
+  <div class="col-span-1">
+    <label class="block text-gray-700 font-bold mb-2">
+      <span> To Month: </span>
+      <select
+        [ngModel]="$toMonth()"
+        (ngModelChange)="onToMonthChange($event)"
+        class="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+      >
+        @for (month of months; track $index) {
+          <option
+            [value]="month.value"
+            [disabled]="month.value < $fromMonth()"
+          >
+            {{ month.name }}
+          </option>
+        }
+      </select>
+    </label>
+  </div>
+</div>
